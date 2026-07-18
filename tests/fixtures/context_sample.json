@@ -1,0 +1,24 @@
+{
+  "repo": {
+    "name": "pitch-autopilot-sample",
+    "path": ".",
+    "head": "0123456789abcdef",
+    "collected_at": "2026-07-18T00:00:00Z"
+  },
+  "commits": [
+    {
+      "hash": "0123456",
+      "date": "2026-07-18",
+      "subject": "Add repository evidence collector",
+      "stat": "collect.py | 80 +++++++++++++++++++++++++++++++++"
+    }
+  ],
+  "readme": "Pitch Autopilot turns repository evidence into a bilingual six-slide pitch deck and short talk scripts.",
+  "sources": [
+    {
+      "path": "collect.py",
+      "head": "def collect(repo):\n    return repository_evidence"
+    }
+  ],
+  "screenshots": []
+}

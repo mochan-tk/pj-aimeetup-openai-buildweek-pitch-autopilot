@@ -29,7 +29,7 @@ Authoritative specs — read before designing anything:
 
 - `collect.py` — stage 1: repo facts → `out/context.json` (caps: 50 commits,
   200 lines/file, 10 files).
-- `generate.py` — stage 2: OpenAI Structured Outputs, fixed SlideDeck
+- `generate.py` — stage 2: Azure OpenAI Structured Outputs, fixed SlideDeck
   schema; pure function `generate(context, langs)`; 1 retry on schema
   violation.
 - `render.py` — stage 3: SlideDeck JSON → Marp `slides.md` → `deck.html`
@@ -51,9 +51,11 @@ Run steps in this order. Do not improvise alternative commands when these work.
 
 1. Python 3.11+ (`python3 --version`). No virtualenv ceremony needed today.
 2. `pip install -r requirements.txt` — the only dependency is `openai`.
-3. `export OPENAI_API_KEY=...` — required by the generate stage. In the
-   Codex cloud environment this arrives as a configured secret; do not
-   hardcode or echo it.
+3. Export `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and
+   `AZURE_OPENAI_DEPLOYMENT` for the generate stage. Optionally set
+   `OPENAI_API_VERSION` (default `2024-10-21`). In the Codex cloud
+   environment these arrive as configured values; do not hardcode or echo
+   them.
 4. `npx @marp-team/marp-cli --version` — Marp needs no install; npx runs it
    one-shot (first invocation downloads, ~30 s).
 5. Stage self-tests (each module runs standalone; see the ADR contracts):

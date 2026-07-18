@@ -2,8 +2,9 @@
 
 Paste the block below into Codex cloud as the first task for this
 repository. Recommended dispatch: `--attempts 2`. Prerequisites: this design
-pack is committed to `main`; the cloud environment has the `OPENAI_API_KEY`
-secret and internet access ON.
+pack is committed to `main`; the cloud environment has `AZURE_OPENAI_ENDPOINT`,
+`AZURE_OPENAI_API_KEY`, and `AZURE_OPENAI_DEPLOYMENT` configured, with
+optional `OPENAI_API_VERSION` (default `2024-10-21`) and internet access ON.
 
 Use this single prompt for the fastest path to a working MVP (13:30 kickoff).
 The alternative, finer-grained path is `issues.sh` (one task = one PR,
@@ -24,12 +25,13 @@ Then implement the Pitch Autopilot MVP:
 1. collect.py — repo facts (git log --stat max 50 commits, README, first 200
    lines of up to 10 key sources, assets/screenshots/ listing) ->
    out/context.json per the ADR contract. Verify on this repository itself.
-2. generate.py — OpenAI Structured Outputs with the fixed SlideDeck schema
+2. generate.py — Azure OpenAI Structured Outputs with the fixed SlideDeck schema
    from the ADR: 6 slides (title/problem/solution/demo/architecture/next) +
    90-second scripts (ja <= 300 chars, en <= 90 words), facts-only (never
    name a feature absent from context.json), retry once on a schema-invalid
    response then fail non-zero. Add one offline unit test with a mocked
-   client in tests/.
+   client in tests/. Use `AzureOpenAI` with key-based authentication and pass
+   `AZURE_OPENAI_DEPLOYMENT` as `model`.
 3. render.py + theme/pitch.css — Marp Markdown with the bilingual layout
    (Japanese large, English in class="en" rendered smaller), then
    `npx @marp-team/marp-cli out/slides.md -o out/deck.html --theme theme/pitch.css`.

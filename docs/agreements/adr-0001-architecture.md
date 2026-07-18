@@ -30,7 +30,7 @@ via `npx @marp-team/marp-cli` (no install step).
 
 ```
 [target repo] → collect.py → context.json
-                    → generate.py (OpenAI Structured Outputs) → SlideDeck JSON
+                    → generate.py (Azure OpenAI Structured Outputs) → SlideDeck JSON
                         → render.py + theme/pitch.css → slides.md
                             → npx @marp-team/marp-cli → deck.html
                                (local Mac only: deck.pdf / deck.pptx)
@@ -49,19 +49,20 @@ decks (REQ-006).
 
 ### Stage 2 — generate (`generate.py`)
 
-One OpenAI API call using **Structured Outputs with a fixed JSON schema**
-(strict mode), wrapped as a pure function
+One Azure OpenAI API call using **Structured Outputs with a fixed JSON
+schema** (strict mode), wrapped as a pure function
 `generate(context: dict, langs: list) -> SlideDeck`. On a schema-invalid
 response: retry exactly once, then fail non-zero (REQ-007). The system
 prompt forbids naming features absent from the context (REQ-006) and
 enforces script budgets (ja ≤ 300 chars, en ≤ 90 words, REQ-005).
 Rationale: schema enforcement eliminates the classic "JSON parse roulette"
 failure mode; a pure function makes the one required unit test trivial and
-offline (REQ-012). Default model: `gpt-4o-mini` (fast/cheap; fits the
-2-minute budget); the model name is a constant so it can be upgraded at
-preflight. `codex exec --json` remains a documented fallback for the
-generation call if API quota becomes an issue, but the OpenAI API is the
-default path.
+offline (REQ-012). The default client is `AzureOpenAI` with key-based
+authentication. It reads `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`,
+and application-defined `AZURE_OPENAI_DEPLOYMENT`; the deployment name is
+passed as `model`. `OPENAI_API_VERSION` defaults to `2024-10-21`. Azure
+resource provisioning and Microsoft Entra ID authentication are outside
+this decision.
 
 ### Stage 3 — render (`render.py` + `theme/pitch.css`)
 
@@ -163,4 +164,4 @@ nor `script_en.md` (symmetric for `--langs en`).
   image-per-slide, editable variant experimental + LibreOffice):
   github.com/marp-team/marp-cli
 - Slidev export requires Playwright: sli.dev guide/exporting
-- OpenAI Structured Outputs: platform.openai.com/docs/guides/structured-outputs
+- Azure OpenAI Structured Outputs: learn.microsoft.com/azure/ai-foundry/openai/how-to/structured-outputs

@@ -49,7 +49,7 @@ Implement stage 1: `collect.py` gathers this repository's development facts into
 
 ## Out of scope
 
-- OpenAI calls, rendering, the `pitch` CLI wrapper (issues #2-#4).
+- Azure OpenAI calls, rendering, the `pitch` CLI wrapper (issues #2-#4).
 - Diff bodies or full file contents (caps are the contract).
 
 ## File ownership
@@ -81,7 +81,7 @@ EOF
 BODY_GENERATE="$(cat <<'EOF'
 ## Objective
 
-Implement stage 2: `generate.py` turns `context.json` into a SlideDeck JSON (6 slides + ja/en 90-second scripts) via OpenAI Structured Outputs with the fixed schema from the ADR.
+Implement stage 2: `generate.py` turns `context.json` into a SlideDeck JSON (6 slides + ja/en 90-second scripts) via Azure OpenAI Structured Outputs with the fixed schema from the ADR.
 
 ## Context & references
 
@@ -93,7 +93,8 @@ Implement stage 2: `generate.py` turns `context.json` into a SlideDeck JSON (6 s
 ## Acceptance criteria
 
 - [ ] `generate(context: dict, langs: list) -> dict` is a pure function (API client injectable) returning JSON that conforms to the SlideDeck contract: exactly 6 slides with ids title/problem/solution/demo/architecture/next in order (REQ-003).
-- [ ] Uses OpenAI Structured Outputs (strict JSON schema, default model constant `gpt-4o-mini`); a schema-invalid response is retried exactly once, then raises so the CLI exits non-zero (REQ-007).
+- [ ] The default client uses `AzureOpenAI` with key-based authentication. It requires `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `AZURE_OPENAI_DEPLOYMENT`, and uses `OPENAI_API_VERSION` with default `2024-10-21`.
+- [ ] Uses Azure OpenAI Structured Outputs with the strict JSON schema and passes `AZURE_OPENAI_DEPLOYMENT` as `model`; a schema-invalid response is retried exactly once, then raises so the CLI exits non-zero (REQ-007).
 - [ ] The system prompt forbids naming any feature absent from the context and enforces script budgets: ja <= 300 chars, en <= 90 words (REQ-005, REQ-006).
 - [ ] Language subsetting per ADR: unrequested-language fields come back as empty strings (REQ-009).
 - [ ] At least one offline unit test (mocked client — happy path and the retry-then-fail path) in `tests/`; no network needed (REQ-012).
@@ -112,8 +113,8 @@ Implement stage 2: `generate.py` turns `context.json` into a SlideDeck JSON (6 s
 ## Verification
 
 ```bash
-python3 -m unittest discover tests   # offline, must pass without OPENAI_API_KEY
-# Live smoke (OPENAI_API_KEY is configured in the cloud environment).
+python3 -m unittest discover tests   # offline, must pass without Azure variables
+# Live smoke (Azure OpenAI variables are configured in the cloud environment).
 # Uses a minimal hand-written context fixture from tests/, since collect.py
 # (issue #1) may not be merged yet:
 python3 generate.py tests/fixtures/context_sample.json -o out/deck.json --langs ja,en
@@ -156,7 +157,7 @@ Implement stage 3: `render.py` + `theme/pitch.css` turn a SlideDeck JSON into a 
 
 ## Out of scope
 
-- Calling OpenAI (issue #2), collecting facts (issue #1), CLI wiring (issue #4).
+- Calling Azure OpenAI (issue #2), collecting facts (issue #1), CLI wiring (issue #4).
 - PDF/PPTX verification (local Mac, human).
 
 ## File ownership
