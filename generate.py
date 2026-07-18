@@ -49,17 +49,25 @@ SLIDE_DECK_SCHEMA: dict[str, Any] = {
 
 SYSTEM_PROMPT = """You create a concise six-slide hackathon pitch deck.
 Use only facts and feature or capability names explicitly present in the supplied
-context. Never infer, embellish, or name an absent feature. Return exactly these
+context. Treat the context as a closed world: every substantive claim must be a
+direct restatement or close translation of text in the repository name, README,
+commit subjects, source excerpts, or screenshot paths. Never infer, embellish, or
+name an absent feature. Do not invent benefits, motivations, user pain, event
+names, dates, future work, or quality claims. Do not describe bilingual output as
+translation unless the context explicitly says translation. Return exactly these
 slides in order: title, problem, solution, demo, architecture, next. Keep Japanese
 script_ja at no more than 300 characters and English script_en at no more than 90
 words. Each slide has at most four bullets per language. For an unrequested
 language, return empty headings, empty bullet arrays, and an empty script. Use a
 context screenshot path only on the demo slide; when none exists, set image to
-null and provide a compact text architecture diagram in arch_text.
+null and provide a compact text architecture diagram in the demo slide's
+arch_text. Set arch_text to null on every other slide. If the context does not
+explicitly support a problem or next-step bullet, return an empty bullet array.
+Scripts must summarize only the same explicit repository facts used on the slides.
 """
 
 
-def _validate_deck(deck: Any, langs: list[str]) -> dict[str, Any]:
+def _validate_deck(deck: Any, langs: list[str], context: dict) -> dict[str, Any]:
     if not isinstance(deck, dict) or set(deck) != {"title", "slides", "script_ja", "script_en"}:
         raise ValueError("response is not a SlideDeck object")
     slides = deck.get("slides")
@@ -70,7 +78,8 @@ def _validate_deck(deck: Any, langs: list[str]) -> dict[str, Any]:
 
     requested = set(langs)
     required = {"id", "heading_ja", "heading_en", "bullets_ja", "bullets_en", "image", "arch_text"}
-    for slide in slides:
+    screenshot_paths = set(context.get("screenshots", []))
+    for index, slide in enumerate(slides):
         if set(slide) != required:
             raise ValueError(f"slide {slide.get('id', '<unknown>')} has invalid fields")
         for lang in SUPPORTED_LANGS:
@@ -86,6 +95,14 @@ def _validate_deck(deck: Any, langs: list[str]) -> dict[str, Any]:
             raise ValueError(f"slide {slide['id']} has invalid image")
         if slide["arch_text"] is not None and not isinstance(slide["arch_text"], str):
             raise ValueError(f"slide {slide['id']} has invalid arch_text")
+        if index != 3 and (slide["image"] is not None or slide["arch_text"] is not None):
+            raise ValueError("image and arch_text are allowed only on the demo slide")
+
+    demo = slides[3]
+    if demo["image"] is not None and demo["image"] not in screenshot_paths:
+        raise ValueError("demo image is absent from context screenshots")
+    if demo["image"] is None and not demo["arch_text"]:
+        raise ValueError("demo slide requires arch_text when no image is selected")
 
     if not isinstance(deck["title"], str):
         raise ValueError("SlideDeck title must be a string")
@@ -160,6 +177,7 @@ def generate(
     for _attempt in range(2):
         response = client.chat.completions.create(
             model=deployment,
+            temperature=0,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
@@ -174,7 +192,9 @@ def generate(
             },
         )
         try:
-            return _validate_deck(json.loads(_response_text(response)), normalized_langs)
+            return _validate_deck(
+                json.loads(_response_text(response)), normalized_langs, context
+            )
         except (json.JSONDecodeError, ValueError) as exc:
             last_error = exc
     raise ValueError(f"invalid SlideDeck response after 2 attempts: {last_error}") from last_error

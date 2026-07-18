@@ -64,6 +64,7 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual(len(client.chat.completions.calls), 1)
         call = client.chat.completions.calls[0]
         self.assertEqual(call["model"], "pitch-deployment")
+        self.assertEqual(call["temperature"], 0)
         self.assertEqual(call["response_format"]["type"], "json_schema")
         self.assertTrue(call["response_format"]["json_schema"]["strict"])
 
@@ -74,6 +75,19 @@ class GenerateTests(unittest.TestCase):
                 self.context, ["ja", "en"], client, deployment="pitch-deployment"
             )
         self.assertEqual(len(client.chat.completions.calls), 2)
+
+    def test_misplaced_demo_fallback_is_retried(self):
+        invalid = valid_deck()
+        invalid["slides"][3]["arch_text"] = None
+        invalid["slides"][4]["arch_text"] = "misplaced fallback"
+        client = fake_client([invalid, valid_deck()])
+
+        result = generate(
+            self.context, ["ja", "en"], client, deployment="pitch-deployment"
+        )
+
+        self.assertEqual(len(client.chat.completions.calls), 2)
+        self.assertEqual(result["slides"][3]["arch_text"], "repo -> context -> deck")
 
     def test_unrequested_language_is_empty(self):
         client = fake_client([valid_deck(("ja",))])
